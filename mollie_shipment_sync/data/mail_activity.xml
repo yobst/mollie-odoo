@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="mail_activity_mollie_exception" model="mail.activity.type">
+            <field name="name">Mollie Sync Exception</field>
+            <field name="icon">fa-warning</field>
+            <field name="delay_count">0</field>
+            <field name="decoration_type">warning</field>
+            <field name="active">False</field>
+        </record>
+
+</odoo>

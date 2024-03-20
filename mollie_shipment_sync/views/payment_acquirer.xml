@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="payment_acquirer_inh_view_form" model="ir.ui.view">
+        <field name="name">payment.provider.view.form</field>
+        <field name="model">payment.provider</field>
+        <field name="inherit_id" ref="payment_mollie_official.acquirer_form_view_mollie"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='provider_credentials']/group" position="after">
+                <group name="shipment" string="Shipment">
+                    <field name="mollie_auto_sync_shipment" />
+                    <field name="reduce_quantity_action" invisible="not mollie_auto_sync_shipment" required="mollie_auto_sync_shipment"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
