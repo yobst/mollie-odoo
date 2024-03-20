@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="mollie_confirmation_wizard_view_form" model="ir.ui.view">
+        <field name="name">mollie.confirmation.wizard.view.form</field>
+        <field name="model">mollie.confirmation.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Confirm dialog">
+                <sheet>
+                    <field name="shipping_line_qty_increase" invisible="1"/>
+                    <field name="wizard_line_count" invisible="1"/>
+                    <p invisible="not shipping_line_qty_increase" class="alert alert-warning" style="border-radius: 1em;" role="alert">
+                        <span class="fa fa-exclamation-triangle"> Order status is shipping, You can't sync additional quantity with mollie.</span>
+                    </p>
+                    <field name="wizard_line_ids" invisible="wizard_line_count == 0">
+                        <tree no_open="1" create="0" delete="0">
+                            <field name="product_id" />
+                            <field name="quantity_in_mollie" />
+                            <field name="quantity_at_odoo" />
+                            <field name="diffrence" decoration-success="diffrence &gt; 0" decoration-danger="diffrence &lt; 0"/>
+                        </tree>
+                    </field>
+                    <div class="d-flex" invisible="wizard_line_count == 0">
+                        <field name="sync" />
+                        <label for="sync"/>
+                    </div>
+                </sheet>
+                <footer>
+                    <button string="Confirm &amp; Sync" name="confirm" type="object" class="btn-primary" invisible="not sync or wizard_line_count == 0" />
+                    <button string="Confirm" name="confirm" type="object" class="btn-primary" invisible="not sync or wizard_line_count == 0" />
+                    <button string="Cancel" class="btn-secondary" special="cancel" />
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>
