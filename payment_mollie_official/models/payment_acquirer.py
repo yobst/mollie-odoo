@@ -46,7 +46,8 @@ class PaymentProviderMollie(models.Model):
 
     def action_mollie_sync_methods(self):
         """ This method will sync mollie methods and translations via API """
-        methods = self._api_mollie_get_active_payment_methods()
+        self.ensure_one()
+        methods = self._api_mollie_get_active_payment_methods(all_methods=True)
         if methods:
             self._sync_mollie_methods(methods)
             self._create_method_translations()
@@ -101,22 +102,17 @@ class PaymentProviderMollie(models.Model):
         :param dict methods_data: Mollie's method data received from api
         """
 
-        # Activate/Deactivate existing methods
-        existing_methods = self.with_context(active_test=False).mollie_methods_ids
-        for method in existing_methods:
-            method.active = method.method_code in methods_data.keys()
+        mollie_methods = self.with_context(active_test=False).mollie_methods_ids
 
         # Create New methods
         MolliePaymentMethod = self.env['mollie.payment.method']
-        methods_to_create = methods_data.keys() - set(existing_methods.mapped('method_code'))
+        methods_to_create = methods_data.keys() - set(mollie_methods.mapped('method_code'))
         for method in methods_to_create:
             method_info = methods_data[method]
             create_vals = {
                 'name': method_info['description'],
                 'method_code': method_info['id'],
                 'provider_id': self.id,
-                'supports_order_api': method_info.get('support_order_api', False),
-                'supports_payment_api': method_info.get('support_payment_api', False)
             }
 
             # Manage issuer for the method
@@ -136,7 +132,20 @@ class PaymentProviderMollie(models.Model):
                 })
             if icon:
                 create_vals['payment_icon_ids'] = [(6, 0, [icon.id])]
-            MolliePaymentMethod.create(create_vals)
+            mollie_methods += MolliePaymentMethod.create(create_vals)
+
+        for method_code, method_data in methods_data.items():
+            issuers_data = method_data.get('issuers', [])
+            mollie_method = mollie_methods.filtered(lambda m: m.method_code == method_code)
+            # remove the issuer if it removed from mollie (iban2 removed the issuers support)
+            mollie_supported_issuer_codes = [issuer_info['id'] for issuer_info in issuers_data]
+            issuers_to_delete = mollie_method.payment_issuer_ids.filtered(lambda issuer: issuer.issuers_code not in mollie_supported_issuer_codes)
+            if issuers_to_delete:
+                issuers_to_delete.unlink()
+
+        # Activate methods & update method data
+        for method in mollie_methods:
+            method.active = methods_data.get(method.method_code, {}).get('status') == 'activated'
 
     def _get_issuers_ids(self, issuers_data):
         """ Create/Update the mollie issuers based on issuers data received from
@@ -180,7 +189,7 @@ class PaymentProviderMollie(models.Model):
         mollie_methods = self.mollie_methods_ids
 
         for lang in active_langs:
-            methods_data = self._api_mollie_get_active_payment_methods(extra_params={'locale': lang.code})
+            methods_data = self._api_mollie_get_active_payment_methods(all_methods=True, extra_params={'locale': lang.code})
             for method in mollie_methods:
                 translated_value = methods_data.get(method.method_code, {}).get('description')
                 method.with_context(lang=lang.code).write({
@@ -204,15 +213,15 @@ class PaymentProviderMollie(models.Model):
         methods = self.mollie_methods_ids.filtered(lambda m: m.active and m.active_on_shop)
 
         # Prepare extra params to filter methods via mollie API
-        has_voucher_line, extra_params = False, {}
+        has_voucher_line, extra_params = False, {'includeWallets': 'applepay'}
+        if not order and request.params.get('order_id'):
+            order = self.env['sale.order'].sudo().browse(request.params.get('order_id'))
         if order:
             extra_params['amount'] = {'value': "%.2f" % order.amount_total, 'currency': order.currency_id.name}
+            extra_params['resource'] = 'orders'
             has_voucher_line = order.mapped('order_line.product_id.product_tmpl_id')._get_mollie_voucher_category()
             if order.partner_invoice_id.country_id:
                 extra_params['billingCountry'] = order.partner_invoice_id.country_id.code
-        else:
-            # Hide the mollie methods that only supports order api
-            methods = methods.filtered(lambda m: m.supports_payment_api)
 
         if invoice and invoice._name == 'account.move':
             extra_params['amount'] = {'value': "%.2f" % invoice.amount_residual, 'currency': invoice.currency_id.name}
@@ -232,7 +241,7 @@ class PaymentProviderMollie(models.Model):
 
         # Hide based on country
         if request:
-            country_code = request.session.geoip and request.session.geoip.get('country_code') or False
+            country_code = request.geoip and request.geoip.get('country_code') or False
             if country_code:
                 methods = methods.filtered(lambda m: not m.country_ids or country_code in m.country_ids.mapped('code'))
 
@@ -300,7 +309,7 @@ class PaymentProviderMollie(models.Model):
                 raise ValidationError("Mollie: " + error_msg)
         return result
 
-    def _api_mollie_get_active_payment_methods(self, extra_params=None):
+    def _api_mollie_get_active_payment_methods(self, extra_params=None, all_methods=None):
         """ Get method data from the mollie. It will return the methods
         that are enabled in the Mollie.
         :param dict extra_params: Optional parameters which are passed to mollie during API call
@@ -309,25 +318,14 @@ class PaymentProviderMollie(models.Model):
         """
         result = {}
         extra_params = extra_params or {}
-        params = {'include': 'issuers', 'includeWallets': 'applepay', **extra_params}
+        endpoint = '/methods/all' if all_methods else '/methods'
+        params = {'include': 'issuers', **extra_params}
 
         # get payment api methods
-        payemnt_api_methods = self._mollie_make_request('/methods', params=params, method="GET", silent_errors=True)
+        payemnt_api_methods = self._mollie_make_request(endpoint, params=params, method="GET", silent_errors=True)
         if payemnt_api_methods and payemnt_api_methods.get('count'):
             for method in payemnt_api_methods['_embedded']['methods']:
-                method['support_payment_api'] = True
                 result[method['id']] = method
-
-        # get order api methods
-        params['resource'] = 'orders'
-        order_api_methods = self._mollie_make_request('/methods', params=params, method="GET", silent_errors=True)
-        if order_api_methods and order_api_methods.get('count'):
-            for method in order_api_methods['_embedded']['methods']:
-                if method['id'] in result:
-                    result[method['id']]['support_order_api'] = True
-                else:
-                    method['support_order_api'] = True
-                    result[method['id']] = method
         return result or {}
 
     def _api_mollie_create_payment_record(self, api_type, payment_data, params=None, silent_errors=False):
