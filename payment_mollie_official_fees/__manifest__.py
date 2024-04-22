@@ -23,5 +23,7 @@
         'views/templates.xml',
     ],
 
-    'images': [],
+    'images': [
+        'static/description/cover.png',
+    ],
 }
