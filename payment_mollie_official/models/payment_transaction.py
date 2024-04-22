@@ -7,6 +7,7 @@ from werkzeug import urls
 from odoo.http import request
 from odoo.addons.payment_mollie.controllers.main import MollieController
 from odoo.exceptions import ValidationError
+from odoo.tools import float_compare
 
 from odoo import _, api, fields, models, tools
 
@@ -54,7 +55,7 @@ class PaymentTransaction(models.Model):
             return
 
         provider_reference = self.provider_reference
-        mollie_payment = self.provider_id._api_mollie_get_payment_data(provider_reference)
+        mollie_payment = self.provider_id._api_mollie_get_payment_data(provider_reference, force_payment=True)
         payment_status = mollie_payment.get('status')
         if payment_status == 'paid':
             if mollie_payment.get('amountCaptured') and float(mollie_payment['amountCaptured']['value']) < self.amount:
@@ -254,14 +255,11 @@ class PaymentTransaction(models.Model):
         result = None
 
         # Order API (use if sale orders are present). Also qr code is only supported by Payment API
-        if (not method_record.enable_qr_payment) and 'sale_order_ids' in self._fields and self.sale_order_ids and method_record.supports_order_api:
+        # we do float_compare as partial payments is now possible.
+        if (not method_record.enable_qr_payment) and 'sale_order_ids' in self._fields and self.sale_order_ids and len(self.sale_order_ids) == 1 and float_compare(self.sale_order_ids.amount_total, self.amount, precision_digits=2) == 0:
             # Order API
-            result = self._mollie_create_payment_record('order', silent_errors=True)
-
-        # Payment API
-        if (result is None or result.get('status') == 422) and method_record.supports_payment_api:  # Here 422 status used for fallback Read more at https://docs.mollie.com/overview/handling-errors
-            if result:
-                _logger.warning(f"Can not use order api due to 'Error[422]: {result.get('title')} - {result.get('detail')}' \n- Fallback on Mollie payment API ")
+            result = self._mollie_create_payment_record('order')
+        else:
             result = self._mollie_create_payment_record('payment')
         return result
 

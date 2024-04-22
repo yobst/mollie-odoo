@@ -15,7 +15,7 @@
                         </div>
                         <div class="content-group">
                             <div class="mt16">
-                                <field name="mollie_terminal_api_key" class="oe_inline" />
+                                <field name="mollie_terminal_api_key" class="oe_inline" password="True" />
                             </div>
                             <div attrs="{'invisible': [('mollie_terminal_api_key', '=', False)]}">
                                 <button type="action" name="%(mollie_pos_terminal.mollie_pos_terminal_action)d" icon="fa-arrow-right" class="btn-link">View Terminals</button>
