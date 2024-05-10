@@ -15,7 +15,7 @@
     """,
 
     'depends': [
-        'payment_mollie', 'product', 'account'
+        'payment_mollie', 'product', 'account', 'point_of_sale'
     ],
     'external_dependencies': {},
     'data': [
