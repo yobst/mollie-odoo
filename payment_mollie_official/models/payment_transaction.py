@@ -291,6 +291,9 @@ class PaymentTransaction(models.Model):
         base_url = self.provider_id.get_base_url()
         redirect_url = urls.url_join(base_url, MollieController._return_url)
         params = {}
+        order = self.sale_order_ids[0]
+        splits = self._compute_splits(order)
+        routing_data = self._prepare_mollie_routing_payload(splits)
         payment_data = {
             'method': self.mollie_payment_method,
             'amount': {
@@ -302,12 +305,12 @@ class PaymentTransaction(models.Model):
                 'reference': self.reference,
             },
             'locale': self.provider_id._mollie_user_locale(),
-            'redirectUrl': f'{redirect_url}?ref={self.reference}'
+            'redirectUrl': f'{redirect_url}?ref={self.reference}',
+            'routing': routing_data
         }
 
         if api_type == 'order':
             # Order api parameters
-            order = self.sale_order_ids[0]
             payment_data.update({
                 'billingAddress': self._prepare_mollie_address(),
                 'orderNumber': f'{_("Sale Order")} ({self.reference})',
@@ -410,6 +413,27 @@ class PaymentTransaction(models.Model):
 
         return lines
 
+    def _compute_splits(self, order):
+        """ This method compute payment splits for the mollie method configuration.
+
+        :param int order_id: order ID
+        :return: payment splits for the mollie method
+        :rtype: vector of payment records
+        """
+        self.ensure_one()
+        splits = []
+
+        splitMap = {}
+        for line in order.order_line.filtered(lambda l: not l.display_type):
+            if line.mollie_partner_id in splitMap:
+                splitMap[line.mollie_partner_id] += line.price_subtotal_incl
+            else:
+                splitMap[line.mollie_partner_id] = line.price_subtotal_incl
+
+        for id, amount in splitMap.items():
+            splits.append((id, amount))
+        return splits
+    
     def _mollie_prepare_fees_line(self):
         return {
             'name': _('Provider Fees'),
@@ -432,6 +456,23 @@ class PaymentTransaction(models.Model):
                 'value': "%.2f" % 0.0,
             }
         }
+    
+    def _prepare_mollie_routing_payload(self, splits):
+        routing_payload = []
+        for split in splits:
+            payload = {
+                'amount': {
+                    'currency': self.currency_id.name,
+                    'value': split[1]
+                },
+                'destination': {
+                    'type': 'organization',
+                    'organizationId': split[0]
+                }
+            }
+            routing_payload.append(payload)
+        return routing_payload
+
 
     def _prepare_mollie_address(self):
         """ This method prepare address used in order api of mollie

@@ -110,29 +110,6 @@ class MolliePaymentMethod(models.Model):
                 variable = self.fees_int_var
             fees = (amount * variable / 100.0 + fixed) / (1 - variable / 100.0)
         return fees
-    
-    def _compute_splits(self, order_id):
-        """ This method compute fees for the mollie method configuration.
-
-        :param int order_id: order ID
-        :return: payment splits for the mollie method
-        :rtype: vector of payment records
-        """
-        self.ensure_one()
-        splits = []
-        order = self.env['pos.order'].search([
-                ('id', '=', order_id)
-            ], limit=1)
-        splitMap = {}
-        for line in order.lines:
-            if line.mollie_partner_id in splitMap:
-                splitMap[line.mollie_partner_id] += line.price_subtotal_incl
-            else:
-                splitMap[line.mollie_partner_id] = line.price_subtotal_incl
-
-        for id, amount in splitMap.items():
-            splits.append((id, amount))
-        return splits
 
     def _mollie_show_creditcard_option(self):
         if self.method_code != 'creditcard':
