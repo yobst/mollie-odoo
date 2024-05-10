@@ -195,10 +195,10 @@ class MolliePosOrderLine(models.Model):
     def create(self, values_list):
         super().create(values_list)
         supplierInfo = self.env['product.supplierinfo'].search([
-                ('product_tmpl_id', '=', self.product_id)
+                ('product_tmpl_id', '=', self.product_id[0])
             ], limit=1)
         partner = self.env['res.partner'].search([
-            ('id', '=', supplierInfo.partner_id)
+            ('id', '=', supplierInfo.partner_id[0])
         ], limit=1)
         self.mollie_partner_id = partner.mollie_partner_id
         return self
