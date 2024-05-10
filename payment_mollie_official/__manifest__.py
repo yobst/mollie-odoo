@@ -15,7 +15,7 @@
     """,
 
     'depends': [
-        'payment_mollie', 'product', 'account', 'contacts'
+        'payment_mollie', 'product', 'account'
     ],
     'external_dependencies': {},
     'data': [
@@ -25,7 +25,6 @@
         'views/payment_mollie_templates.xml',
         'views/account_move_view.xml',
         'views/account_payment_register.xml',
-        'views/contact_mollie_view.xml'
     ],
 
     'assets': {
