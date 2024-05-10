@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from odoo.osv import expression
-from odoo import fields, models
-
+from odoo import api, fields, models
 
 class MolliePaymentMethod(models.Model):
     _name = 'mollie.payment.method'
@@ -111,6 +110,29 @@ class MolliePaymentMethod(models.Model):
                 variable = self.fees_int_var
             fees = (amount * variable / 100.0 + fixed) / (1 - variable / 100.0)
         return fees
+    
+    def _compute_splits(self, order_id):
+        """ This method compute fees for the mollie method configuration.
+
+        :param int order_id: order ID
+        :return: payment splits for the mollie method
+        :rtype: vector of payment records
+        """
+        self.ensure_one()
+        splits = []
+        order = self.env['pos.order'].search([
+                ('id', '=', order_id)
+            ], limit=1)
+        splitMap = {}
+        for line in order.lines:
+            if line.mollie_partner_id in splitMap:
+                splitMap[line.mollie_partner_id] += line.price_subtotal_incl
+            else:
+                splitMap[line.mollie_partner_id] = line.price_subtotal_incl
+
+        for id, amount in splitMap.items():
+            splits.append((id, amount))
+        return splits
 
     def _mollie_show_creditcard_option(self):
         if self.method_code != 'creditcard':
@@ -163,3 +185,20 @@ class MollieContact(models.Model):
     _inherit = 'res.partner'
 
     mollie_partner_id = fields.Char(string="Mollie Partner ID", default="")
+
+
+class MolliePosOrderLine(models.Model):
+    _inherit = 'pos.order.line'
+    mollie_partner_id = fields.Char(string="Mollie Partner ID")
+
+    @api.model_create_multi
+    def create(self, values_list):
+        super().create(values_list)
+        supplierInfo = self.env['product.supplierinfo'].search([
+                ('product_tmpl_id', '=', self.product_id)
+            ], limit=1)
+        partner = self.env['res.partner'].search([
+            ('id', '=', supplierInfo.partner_id)
+        ], limit=1)
+        self.mollie_partner_id = partner.mollie_partner_id
+        return self
