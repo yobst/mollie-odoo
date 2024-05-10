@@ -308,6 +308,8 @@ class PaymentTransaction(models.Model):
             'redirectUrl': f'{redirect_url}?ref={self.reference}',
             'routing': routing_data
         }
+        payment_data_str = str(payment_data)
+        _logger.info("PAYMENT DATA: %s", payment_data_str) 
 
         if api_type == 'order':
             # Order api parameters
