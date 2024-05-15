@@ -170,12 +170,18 @@ class MolliePosOrderLine(models.Model):
 
     @api.model_create_multi
     def create(self, values_list):
-        super().create(values_list)
-        supplierInfo = self.env['product.supplierinfo'].search([
-                ('product_tmpl_id', '=', self.product_id.id)
+        lines = super().create(values_list)
+        for line in lines:
+            supplierInfo = self.env['product.supplierinfo'].search([
+                    ('product_tmpl_id', '=', line.product_id.id)
+                ], limit=1)
+            partner = self.env['res.partner'].search([
+                ('id', '=', supplierInfo.partner_id.id)
             ], limit=1)
-        partner = self.env['res.partner'].search([
-            ('id', '=', supplierInfo.partner_id.id)
-        ], limit=1)
-        self.mollie_partner_id = partner.mollie_partner_id
-        return self
+            line.mollie_partner_id = partner.mollie_partner_id
+        return lines
+    
+class PosOrder(models.Model):
+    _inherit = 'pos.order'
+        
+
