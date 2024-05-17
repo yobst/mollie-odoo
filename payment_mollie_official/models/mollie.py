@@ -191,10 +191,9 @@ class PosOrder(models.Model):
         :return: payment splits for the mollie method
         :rtype: vector of payment records
         """
-        self.ensure_one()
         splits = []
-
         splitMap = {}
+        
         for line in self.order_line.filtered(lambda l: not l.display_type):
             if line.mollie_partner_id in splitMap:
                 splitMap[line.mollie_partner_id] += line.price_subtotal_incl
