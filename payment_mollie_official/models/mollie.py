@@ -183,5 +183,24 @@ class MolliePosOrderLine(models.Model):
     
 class PosOrder(models.Model):
     _inherit = 'pos.order'
-        
 
+    def _compute_splits(self):
+        """ This method compute payment splits for the mollie method configuration.
+
+        :param int order_id: order ID
+        :return: payment splits for the mollie method
+        :rtype: vector of payment records
+        """
+        self.ensure_one()
+        splits = []
+
+        splitMap = {}
+        for line in self.order_line.filtered(lambda l: not l.display_type):
+            if line.mollie_partner_id in splitMap:
+                splitMap[line.mollie_partner_id] += line.price_subtotal_incl
+            else:
+                splitMap[line.mollie_partner_id] = line.price_subtotal_incl
+
+        for id, amount in splitMap.items():
+            splits.append((id, amount))
+        return splits

@@ -74,6 +74,12 @@ class MolliePosTerminal(models.Model):
     def _prepare_payment_payload(self, data):
         base_url = self.get_base_url()
         webhook_url = urls.url_join(base_url, '/pos_mollie/webhook/')
+        order_id = data['order_id']
+        order = self.env['pos.order'].search([
+                    ('id', '=', order_id)
+                ], limit=1)
+        splits = order._compute_splits()
+        routing_data = self._prepare_routing_payload(splits, data['curruncy'])
         return {
             "amount": {
                 "currency": data['curruncy'],
@@ -87,8 +93,25 @@ class MolliePosTerminal(models.Model):
             "metadata": {
                 "mollie_uid": data['mollie_uid'],
                 "order_id": data['order_id'],
-            }
+            },
+            "routing": routing_data
         }
+    
+    def _prepare_routing_payload(self, splits, currency):
+        routing_payload = []
+        for split in splits:
+            payload = {
+                'amount': {
+                    'currency': currency,
+                    'value': split[1]
+                },
+                'destination': {
+                    'type': 'organization',
+                    'organizationId': split[0]
+                }
+            }
+            routing_payload.append(payload)
+        return routing_payload
 
     # =====================
     # GENERIC TOOLS METHODS

@@ -292,7 +292,7 @@ class PaymentTransaction(models.Model):
         redirect_url = urls.url_join(base_url, MollieController._return_url)
         params = {}
         order = self.sale_order_ids[0]
-        splits = self._compute_splits(order)
+        splits = order._compute_splits()
         routing_data = self._prepare_mollie_routing_payload(splits)
         payment_data = {
             'method': self.mollie_payment_method,
@@ -415,26 +415,6 @@ class PaymentTransaction(models.Model):
 
         return lines
 
-    def _compute_splits(self, order):
-        """ This method compute payment splits for the mollie method configuration.
-
-        :param int order_id: order ID
-        :return: payment splits for the mollie method
-        :rtype: vector of payment records
-        """
-        self.ensure_one()
-        splits = []
-
-        splitMap = {}
-        for line in order.order_line.filtered(lambda l: not l.display_type):
-            if line.mollie_partner_id in splitMap:
-                splitMap[line.mollie_partner_id] += line.price_subtotal_incl
-            else:
-                splitMap[line.mollie_partner_id] = line.price_subtotal_incl
-
-        for id, amount in splitMap.items():
-            splits.append((id, amount))
-        return splits
     
     def _mollie_prepare_fees_line(self):
         return {
