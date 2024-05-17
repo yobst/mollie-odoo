@@ -61,6 +61,7 @@ class MolliePosTerminal(models.Model):
 
     def _api_make_payment_request(self, data):
         payment_payload = self._prepare_payment_payload(data)
+        _logger.info('Mollie POS Terminal Payload on: %s', str(payment_payload))
         result = self._mollie_api_call('/payments', data=payment_payload, method='POST', silent=True)
         self.env['mollie.pos.terminal.payments']._create_mollie_payment_request(result, {**data, 'terminal_id': self.id})
         return result
