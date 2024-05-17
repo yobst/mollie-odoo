@@ -76,7 +76,7 @@ class MolliePosTerminal(models.Model):
         webhook_url = urls.url_join(base_url, '/pos_mollie/webhook/')
         order_id = data['order_id']
         order = self.env['pos.order'].search([
-                    ('id', '=', order_id)
+                    ('name', '=', order_id)
                 ], limit=1)
         splits = order._compute_splits()
         routing_data = self._prepare_routing_payload(splits, data['curruncy'])
