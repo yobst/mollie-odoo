@@ -193,8 +193,8 @@ class PosOrder(models.Model):
         """
         splits = []
         splitMap = {}
-        
-        for line in self.order_line.filtered(lambda l: not l.display_type):
+
+        for line in self.lines.filtered(lambda l: not l.display_type):
             if line.mollie_partner_id in splitMap:
                 splitMap[line.mollie_partner_id] += line.price_subtotal_incl
             else:
