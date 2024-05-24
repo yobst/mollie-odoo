@@ -82,13 +82,17 @@ class MolliePosTerminal(models.Model):
                     ('id', '=', line['product_id'])
                 ], limit=1)
             if product:
-                partner_id = product.variant_seller_ids[0]
-                if partner_id:
-                    mollie_partner_id = partner_id.mollie_partner_id
-                    if mollie_partner_id:
-                        splits.append((mollie_partner_id, amount))
+                seller_id = product.variant_seller_ids[0]
+                if seller_id:
+                    partner_id = seller_id.partner_id
+                    if partner_id:
+                        mollie_partner_id = partner_id.mollie_partner_id
+                        if mollie_partner_id:
+                            splits.append((mollie_partner_id, amount))
+                        else:
+                            raise ValidationError(_('Mollie ID for partner ') + str(partner_id.id) + _(' not found. Please add a Mollie ID.'))
                     else:
-                        raise ValidationError(_('Mollie ID for partner ') + str(partner_id.id) + _(' not found. Please add a Mollie ID.'))
+                        raise ValidationError(_('Partner ID for') + str(seller_id.id) + _(' not found. Please add a Mollie ID.'))
                 else:
                     raise ValidationError(_('No seller for product  ') + str(product.id) + _(' found. Please add a seller id.'))
             else:
