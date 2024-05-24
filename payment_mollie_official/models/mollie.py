@@ -218,5 +218,7 @@ class MollieProductProduct(models.Model):
                 if seller:
                     record.mollie_partner_id = seller.mollie_partner_id
                 else:
-                    record.mollie_partner_id = ""
+                    record.mollie_partner_id = False
+            else:
+                record.mollie_partner_id = False
         
