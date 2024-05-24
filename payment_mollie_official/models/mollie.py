@@ -207,14 +207,12 @@ class PosOrder(models.Model):
 class MollieProductProduct(models.Model):
     _inherit = 'product.product'
 
-    mollie_partner_id = fields.Char(compute='_compute_mollie_id', store=True)
+    mollie_partner_id = fields.Char(compute='_compute_mollie_id')
 
     @api.depends('product_tmpl_id')
     def _compute_mollie_id(self):
         seller_ids = self.product_tmpl_id.seller_ids
-        if not seller_ids:
-            self.mollie_partner_id = ""
-        else:
+        if seller_ids:
             seller = seller_ids[0].partner_id
             if seller:
                 self.mollie_partner_id = seller.mollie_partner_id
