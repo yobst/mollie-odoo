@@ -208,12 +208,12 @@ class PosOrder(models.Model):
 class MollieProductTemplate(models.Model):
     _inherit = 'product.template'
 
-    seller_id = fields.One2many('res.partner', string='Product Seller')
+    seller_id = fields.Many2one('res.partner', string='Product Seller')
 
 class MollieProductProduct(models.Model):
     _inherit = 'product.product'
 
-    mollie_partner_id = fields.Char(compute='_compute_mollie_id', store=True)
+    mollie_partner_id = fields.Char(compute='_compute_mollie_id')
 
     @api.depends('product_tmpl_id')
     def _compute_mollie_id(self):
