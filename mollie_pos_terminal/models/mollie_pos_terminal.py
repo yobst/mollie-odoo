@@ -78,21 +78,21 @@ class MolliePosTerminal(models.Model):
         splits = []
         for line in data['lines']:
             amount = line['price'] * line['quantity']
-            supplierInfo = self.env['product.supplierinfo'].search([
-                    ('product_id', '=', line['product_id'])
+            product = self.env['product.product'].search([
+                    ('id', '=', line['product_id'])
                 ], limit=1)
-            if supplierInfo:
-                partner_id = supplierInfo.partner_id
+            if product:
+                partner_id = product.variant_seller_ids[0]
                 if partner_id:
                     mollie_partner_id = partner_id.mollie_partner_id
                     if mollie_partner_id:
                         splits.append((mollie_partner_id, amount))
                     else:
-                        raise ValidationError(_('Mollie ID for partner ') + partner_id.id + _(' not found. Please add a Mollie ID.'))
+                        raise ValidationError(_('Mollie ID for partner ') + str(partner_id.id) + _(' not found. Please add a Mollie ID.'))
                 else:
-                    raise ValidationError(_('No partner for product supplier  ') + supplierInfo.id + _(' found. Please add a partner id.'))
+                    raise ValidationError(_('No seller for product  ') + str(product.id) + _(' found. Please add a seller id.'))
             else:
-                raise ValidationError(_('Supplier for product ') + line['product_id'] + _(' not found. Please add a supplier.'))
+                raise ValidationError(_('Product ') + str(line['product_id']) + _(' not found. Please create it.'))
 
         routing_data = self._prepare_routing_payload(splits, data['curruncy'])
         return {
