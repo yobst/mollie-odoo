@@ -211,9 +211,12 @@ class MollieProductProduct(models.Model):
 
     @api.depends('product_tmpl_id')
     def _compute_mollie_id(self):
-        seller_ids = self.product_tmpl_id.seller_ids
-        if seller_ids:
-            seller = seller_ids[0].partner_id
-            if seller:
-                self.mollie_partner_id = seller.mollie_partner_id
+        for record in self:
+            seller_ids = record.product_tmpl_id.seller_ids
+            if seller_ids:
+                seller = seller_ids[0].partner_id
+                if seller:
+                    record.mollie_partner_id = seller.mollie_partner_id
+                else:
+                    record.mollie_partner_id = ""
         
