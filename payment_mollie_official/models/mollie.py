@@ -208,7 +208,7 @@ class PosOrder(models.Model):
 class MollieProductTemplate(models.Model):
     _inherit = 'product.template'
 
-    seller_id = fields.one2Many('res.partner', string='Product Seller')
+    seller_id = fields.One2Many('res.partner', string='Product Seller')
 
 class MollieProductProduct(models.Model):
     _inherit = 'product.product'
