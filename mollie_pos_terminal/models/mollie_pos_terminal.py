@@ -75,11 +75,25 @@ class MolliePosTerminal(models.Model):
     def _prepare_payment_payload(self, data):
         base_url = self.get_base_url()
         webhook_url = urls.url_join(base_url, '/pos_mollie/webhook/')
-        order_id = data['order_id']
-        order = self.env['pos.order'].search([
-                    ('name', '=', order_id)
+        splits = []
+        for line in data['lines']:
+            amount = line['price'] * line['quantity']
+            supplierInfo = self.env['product.supplierinfo'].search([
+                    ('product_id', '=', line['product_id'])
                 ], limit=1)
-        splits = order._compute_splits()
+            if supplierInfo:
+                partner_id = supplierInfo.partner_id
+                if partner_id:
+                    mollie_partner_id = partner_id.mollie_partner_id
+                    if mollie_partner_id:
+                        splits.append((mollie_partner_id, amount))
+                    else:
+                        raise ValidationError(_('Mollie ID for partner ') + partner_id.id + _(' not found. Please add a Mollie ID.'))
+                else:
+                    raise ValidationError(_('No partner for product supplier  ') + supplierInfo.id + _(' found. Please add a partner id.'))
+            else:
+                raise ValidationError(_('Supplier for product ') + line['product_id'] + _(' not found. Please add a supplier.'))
+
         routing_data = self._prepare_routing_payload(splits, data['curruncy'])
         return {
             "amount": {
