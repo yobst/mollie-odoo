@@ -33,6 +33,7 @@ export const PaymentMollie = PaymentInterface.extend({
     _prepare_mollie_pay_data: function (order) {
         var line = order.selected_paymentline;
         this.most_recent_mollie_uid = uuidv4();
+        console.log("PREPARING M0ll13 DATA", order)
         return {
             'mollie_uid': this.most_recent_mollie_uid,
             'description': order.name,
