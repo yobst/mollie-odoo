@@ -33,14 +33,22 @@ export const PaymentMollie = PaymentInterface.extend({
     _prepare_mollie_pay_data: function (order) {
         var line = order.selected_paymentline;
         this.most_recent_mollie_uid = uuidv4();
-        console.log("PREPARING M0ll13 DATA", order)
+        console.log("PREPARING M0ll13 DATA", order);
+        const lines = [];
+        for (const orderline of order.orderlines) {
+            lines.push({
+                'price': orderline.price,
+                'quantity': orderline.quantity,
+                'product_id': orderline.product.id
+            });
+        }
         return {
             'mollie_uid': this.most_recent_mollie_uid,
             'description': order.name,
             'order_id': order.uid,
             'curruncy': this.pos.currency.name,
             'amount': line.amount,
-            'lines': order.lines
+            'lines': lines
         }
     },
 
