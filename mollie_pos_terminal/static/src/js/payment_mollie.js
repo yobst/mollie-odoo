@@ -39,6 +39,7 @@ export const PaymentMollie = PaymentInterface.extend({
             'order_id': order.uid,
             'curruncy': this.pos.currency.name,
             'amount': line.amount,
+            'lines': order.lines
         }
     },
 
