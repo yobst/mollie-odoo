@@ -218,4 +218,6 @@ class MollieProductProduct(models.Model):
     @api.depends('product_tmpl_id')
     def _compute_mollie_id(self):
         partner_id = self.product_tmpl_id.seller_id
-        self.mollie_partner_id = partner_id.mollie_partner_id
+        if partner_id:
+            self.mollie_partner_id = partner_id.mollie_partner_id
+        
