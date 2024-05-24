@@ -88,7 +88,7 @@ class MolliePosTerminal(models.Model):
                     if partner_id:
                         mollie_partner_id = partner_id.mollie_partner_id
                         if mollie_partner_id:
-                            splits.append((mollie_partner_id, amount))
+                            splits.append((mollie_partner_id, str(amount)))
                         else:
                             raise ValidationError(_('Mollie ID for partner ') + str(partner_id.id) + _(' not found. Please add a Mollie ID.'))
                     else:
