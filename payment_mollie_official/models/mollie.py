@@ -215,5 +215,7 @@ class MollieProductProduct(models.Model):
         if not seller_ids:
             self.mollie_partner_id = ""
         else:
-            self.mollie_partner_id = seller_ids[0].mollie_partner_id
+            seller = seller_ids[0].partner_id
+            if seller:
+                self.mollie_partner_id = seller.mollie_partner_id
         
