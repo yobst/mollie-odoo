@@ -203,3 +203,19 @@ class PosOrder(models.Model):
         for id, amount in splitMap.items():
             splits.append((id, amount))
         return splits
+    
+
+class MollieProductTemplate(models.Model):
+    _inherit = 'product.template'
+
+    seller_id = fields.one2Many('res.partner', string='Product Seller')
+
+class MollieProductProduct(models.Model):
+    _inherit = 'product.product'
+
+    mollie_partner_id = fields.Char(compute='_compute_mollie_id', store=True)
+
+    @api.depends('product_tmpl_id')
+    def _compute_mollie_id(self):
+        partner_id = self.product_tmpl_id.seller_id
+        self.mollie_partner_id = partner_id.mollie_partner_id
