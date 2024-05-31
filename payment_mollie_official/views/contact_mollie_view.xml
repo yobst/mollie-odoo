@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
     <record id="view_partner_form" model="ir.ui.view">
-        <field name="name">res.partner.view.form</field>
+        <field name="name">res.partner.view.form.inherit.mollie</field>
         <field name="model">res.partner</field>
         <field name="inherit_id" ref="base.view_partner_form" />
         <field name="arch" type="xml">
-            <xpath expr="//field[@name='vat']" position="after">
+            <xpath expr="//field[@name='industry_id']" position="after">
                 <field name="mollie_partner_id"/>
             </xpath>
         </field>
