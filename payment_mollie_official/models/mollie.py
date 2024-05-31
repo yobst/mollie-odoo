@@ -158,67 +158,8 @@ class ProductTemplate(models.Model):
         voucher_line = self.env['mollie.voucher.line'].search(domain, limit=1)
         return voucher_line and voucher_line.mollie_voucher_category or False
 
+
 class MollieContact(models.Model):
     _inherit = 'res.partner'
 
     mollie_partner_id = fields.Char(string="Mollie Partner ID", default="")
-
-
-class MolliePosOrderLine(models.Model):
-    _inherit = 'pos.order.line'
-    mollie_partner_id = fields.Char(string="Mollie Partner ID")
-
-    @api.model_create_multi
-    def create(self, values_list):
-        lines = super().create(values_list)
-        for line in lines:
-            supplierInfo = self.env['product.supplierinfo'].search([
-                    ('product_tmpl_id', '=', line.product_id.id)
-                ], limit=1)
-            partner = self.env['res.partner'].search([
-                ('id', '=', supplierInfo.partner_id.id)
-            ], limit=1)
-            line.mollie_partner_id = partner.mollie_partner_id
-        return lines
-    
-class PosOrder(models.Model):
-    _inherit = 'pos.order'
-
-    def _compute_splits(self):
-        """ This method compute payment splits for the mollie method configuration.
-
-        :param int order_id: order ID
-        :return: payment splits for the mollie method
-        :rtype: vector of payment records
-        """
-        splits = []
-        splitMap = {}
-
-        for line in self.lines.filtered(lambda l: not l.display_type):
-            if line.mollie_partner_id in splitMap:
-                splitMap[line.mollie_partner_id] += line.price_subtotal_incl
-            else:
-                splitMap[line.mollie_partner_id] = line.price_subtotal_incl
-
-        for id, amount in splitMap.items():
-            splits.append((id, amount))
-        return splits
-
-class MollieProductProduct(models.Model):
-    _inherit = 'product.product'
-
-    mollie_partner_id = fields.Char(compute='_compute_mollie_id')
-
-    @api.depends('product_tmpl_id')
-    def _compute_mollie_id(self):
-        for record in self:
-            seller_ids = record.product_tmpl_id.seller_ids
-            if seller_ids:
-                seller = seller_ids[0].partner_id
-                if seller:
-                    record.mollie_partner_id = seller.mollie_partner_id
-                else:
-                    record.mollie_partner_id = False
-            else:
-                record.mollie_partner_id = False
-        
