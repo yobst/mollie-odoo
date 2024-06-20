@@ -76,8 +76,9 @@ class MolliePosTerminal(models.Model):
         base_url = self.get_base_url()
         webhook_url = urls.url_join(base_url, '/pos_mollie/webhook/')
         splits = []
+        fee = 0.8
         for line in data['lines']:
-            amount = line['price'] * line['quantity']
+            amount = line['price'] * line['quantity'] * fee
             product = self.env['product.product'].search([
                     ('id', '=', line['product_id'])
                 ], limit=1)
