@@ -307,6 +307,7 @@ class PaymentTransaction(models.Model):
 
         if api_type == 'order':
             # Order api parameters
+            order = self.sale_order_ids[0]
             payment_data.update({
                 'billingAddress': self._prepare_mollie_address(),
                 'orderNumber': f'{_("Sale Order")} ({self.reference})',
@@ -408,7 +409,6 @@ class PaymentTransaction(models.Model):
             lines.append(self._mollie_prepare_fees_line())
 
         return lines
-
     
     def _mollie_prepare_fees_line(self):
         return {
@@ -432,7 +432,6 @@ class PaymentTransaction(models.Model):
                 'value': "%.2f" % 0.0,
             }
         }
-    
    
     def _prepare_mollie_address(self):
         """ This method prepare address used in order api of mollie
