@@ -291,9 +291,6 @@ class PaymentTransaction(models.Model):
         base_url = self.provider_id.get_base_url()
         redirect_url = urls.url_join(base_url, MollieController._return_url)
         params = {}
-        order = self.sale_order_ids[0]
-        splits = order._compute_splits()
-        routing_data = self._prepare_mollie_routing_payload(splits)
         payment_data = {
             'method': self.mollie_payment_method,
             'amount': {
@@ -305,11 +302,8 @@ class PaymentTransaction(models.Model):
                 'reference': self.reference,
             },
             'locale': self.provider_id._mollie_user_locale(),
-            'redirectUrl': f'{redirect_url}?ref={self.reference}',
-            'routing': routing_data
+            'redirectUrl': f'{redirect_url}?ref={self.reference}'
         }
-        payment_data_str = str(payment_data)
-        _logger.info("PAYMENT DATA: %s", payment_data_str) 
 
         if api_type == 'order':
             # Order api parameters
@@ -439,23 +433,7 @@ class PaymentTransaction(models.Model):
             }
         }
     
-    def _prepare_mollie_routing_payload(self, splits):
-        routing_payload = []
-        for split in splits:
-            payload = {
-                'amount': {
-                    'currency': self.currency_id.name,
-                    'value': split[1]
-                },
-                'destination': {
-                    'type': 'organization',
-                    'organizationId': split[0]
-                }
-            }
-            routing_payload.append(payload)
-        return routing_payload
-
-
+   
     def _prepare_mollie_address(self):
         """ This method prepare address used in order api of mollie
 
