@@ -21,6 +21,12 @@
                                 <button type="action" name="%(mollie_pos_terminal.mollie_pos_terminal_action)d" icon="fa-arrow-right" class="btn-link">View Terminals</button>
                             </div>
                         </div>
+                        <label for="mollie_allow_payment_splits" class="oe_inline o_form_label"/>
+                        <div>
+                            <field name="mollie_allow_payment_splits" class="oe_inline"
+                                attrs="{'readonly': [
+                                    '|', ('pos_has_active_session', '=', True),]}"  />
+                        </div>
                     </div>
                 </div>
             </div>
