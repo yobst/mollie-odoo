@@ -210,14 +210,14 @@ msgstr "Letztes Update am"
 #: model:ir.model.fields,field_description:mollie_pos_terminal.field_res_company__mollie_allow_payment_splits
 #: model:ir.model.fields,field_description:mollie_pos_terminal.field_res_config_settings__mollie_allow_payment_splits
 msgid "Mollie Allow Payment Splits"
-msgstr "Mollie Aufteilung der Zahlung erlauben"
+msgstr "Mollie: Aufteilung der Zahlung erlauben"
 
 #. module: mollie_pos_terminal
 #. odoo-javascript
 #: code:addons/mollie_pos_terminal/static/src/js/payment_mollie.js:0
 #, python-format
 msgid "Mollie Error"
-msgstr "Mollie Fehler"
+msgstr "Mollie-Fehler"
 
 #. module: mollie_pos_terminal
 #. odoo-python
@@ -237,34 +237,34 @@ msgstr "Standard-Partner für Mollie-Zahlung"
 #: model:ir.model.fields,field_description:mollie_pos_terminal.field_pos_payment_method__mollie_pos_terminal_id
 #: model:ir.ui.menu,name:mollie_pos_terminal.mollie_pos_reminal_menu
 msgid "Mollie Pos Terminal"
-msgstr "Mollie POS-Terminal"
+msgstr "Mollie-POS-Terminal"
 
 #. module: mollie_pos_terminal
 #: model:ir.actions.act_window,name:mollie_pos_terminal.mollie_pos_terminal_action
 msgid "Mollie Pos Terminals"
-msgstr "Mollie POS-Terminals"
+msgstr "Mollie-POS-Terminals"
 
 #. module: mollie_pos_terminal
 #: model:ir.actions.act_window,name:mollie_pos_terminal.mollie_pos_terminal_payments_action
 msgid "Mollie Pos Terminals Payments"
-msgstr "Mollie Zahlungen über POS-Terminals"
+msgstr "Mollie-Zahlungen über POS-Terminals"
 
 #. module: mollie_pos_terminal
 #: model:ir.model.fields,field_description:mollie_pos_terminal.field_res_company__mollie_terminal_api_key
 #: model:ir.model.fields,field_description:mollie_pos_terminal.field_res_config_settings__mollie_terminal_api_key
 #: model:ir.model.fields,field_description:mollie_pos_terminal.field_sync_mollie_terminal__mollie_terminal_api_key
 msgid "Mollie Terminal Api Key"
-msgstr "Mollie Terminal API-Schlüssel"
+msgstr "Mollie-Terminal API-Schlüssel"
 
 #. module: mollie_pos_terminal
 #: model:ir.model,name:mollie_pos_terminal.model_sync_mollie_terminal
 msgid "Mollie Terminal Sync Wizard"
-msgstr "Mollie Terminal Synchronisierungsassistent"
+msgstr "Synchronisierungsassistent für Mollie-Terminal "
 
 #. module: mollie_pos_terminal
 #: model:ir.model.fields,field_description:mollie_pos_terminal.field_mollie_pos_terminal_payments__mollie_uid
 msgid "Mollie UID"
-msgstr "Mollie UID"
+msgstr "Mollie-UID"
 
 #. module: mollie_pos_terminal
 #: model:ir.model.fields,field_description:mollie_pos_terminal.field_mollie_pos_terminal__name
@@ -316,12 +316,12 @@ msgstr "API-Schlüssel bitte in der Kassensystem-Einstellung setzen"
 #. module: mollie_pos_terminal
 #: model:ir.model,name:mollie_pos_terminal.model_pos_payment_method
 msgid "Point of Sale Payment Methods"
-msgstr "Kassensystem Zahlungsmethoden"
+msgstr "Kassensystem: Zahlungsmethoden"
 
 #. module: mollie_pos_terminal
 #: model:ir.model,name:mollie_pos_terminal.model_pos_session
 msgid "Point of Sale Session"
-msgstr "Kassensystem Sitzung"
+msgstr "Kassensystem-Sitzung"
 
 #. module: mollie_pos_terminal
 #. odoo-python
