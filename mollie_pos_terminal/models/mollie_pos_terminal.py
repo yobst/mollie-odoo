@@ -96,7 +96,7 @@ class MolliePosTerminal(models.Model):
         if allow_splits:
             splits = []    
             fee = 0.8
-            for line in data['lines']:
+            for line in data['lines'].filtered(lambda l: l['price'] >= 0):
                 amount = line['price'] * line['quantity'] * fee
                 product = self.env['product.product'].search([
                         ('id', '=', line['product_id'])
