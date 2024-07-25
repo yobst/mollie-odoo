@@ -72,6 +72,7 @@ class MolliePosTerminal(models.Model):
     def _api_get_mollie_payment_status(self, transaction_id):
         return self.sudo()._mollie_api_call(f'/payments/{transaction_id}', method='GET', silent=True)
 
+
     def _prepare_payment_payload(self, data):
         base_url = self.get_base_url()
         company = self.company_id or self.env.company
@@ -108,7 +109,7 @@ class MolliePosTerminal(models.Model):
                         if partner_id:
                             mollie_partner_id = partner_id.mollie_partner_id
                             if mollie_partner_id:
-                                splits.append((mollie_partner_id, f"{amount:.2f}"))
+                                splits.append((mollie_partner_id, amount))
                             else:
                                 raise ValidationError(_('Mollie ID for partner ') + str(partner_id.id) + _(' not found. Please add a Mollie ID.'))
                         else:
@@ -124,11 +125,18 @@ class MolliePosTerminal(models.Model):
     
     def _prepare_routing_payload(self, splits, currency):
         routing_payload = []
-        for split in splits:
+        org_sums = {}
+        for org_id, amount in splits:
+            if org_id in org_sums:
+                org_sums[org_id] += amount
+            else:
+                org_sums[org_id] = amount
+        summed_splits = list(org_sums.items())
+        for split in summed_splits:
             payload = {
                 'amount': {
                     'currency': currency,
-                    'value': split[1]
+                    'value': f"{split[1]:.2f}"
                 },
                 'destination': {
                     'type': 'organization',
