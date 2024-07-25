@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from odoo.osv import expression
-from odoo import fields, models
-
+from odoo import api, fields, models
 
 class MolliePaymentMethod(models.Model):
     _name = 'mollie.payment.method'
@@ -158,3 +157,9 @@ class ProductTemplate(models.Model):
             domain = expression.OR([domain, [('category_ids', 'parent_of', categories.ids)]])
         voucher_line = self.env['mollie.voucher.line'].search(domain, limit=1)
         return voucher_line and voucher_line.mollie_voucher_category or False
+
+
+class MollieContact(models.Model):
+    _inherit = 'res.partner'
+
+    mollie_partner_id = fields.Char(string="Mollie Partner ID", default="")
