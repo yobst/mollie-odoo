@@ -109,6 +109,10 @@ class MolliePosTerminal(models.Model):
                     if seller_id:
                         partner_id = seller_id.partner_id
                         if partner_id:
+                            if partner_id.id == self.company_id.partner_id.id:
+                                # Case of routing to ourselves, so we can skip the split here.
+                                # It is also not permitted by Mollie.
+                                continue
                             mollie_partner_id = partner_id.mollie_partner_id
                             if mollie_partner_id:
                                 splits.append((mollie_partner_id, amount))
