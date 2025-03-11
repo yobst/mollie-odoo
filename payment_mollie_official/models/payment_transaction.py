@@ -314,7 +314,7 @@ class PaymentTransaction(models.Model):
                     
                     if not line.product_id:
                         raise exceptions.ValidationError(_('Product ') + line.product_id.name + _(' not found. Please create it.'))
-                    elif not len(line.product_id.seller_ids) == 0:
+                    elif len(line.product_id.seller_ids) == 0:
                         raise ValidationError(_('No vendor for product  ') + line.product_id.name + _(' found. Please add a seller id.'))
                     elif line.product_id.seller_ids[0].partner_id.id == self.company_id.partner_id.id:
                         continue
