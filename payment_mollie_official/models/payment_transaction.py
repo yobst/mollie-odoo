@@ -279,7 +279,7 @@ class PaymentTransaction(models.Model):
             self.provider_reference = result.get('id')
         return result
 
-    def _prepare_routing_payload(self, splits, currency):
+    def _prepare_routing_payload(self, splits):
         routing_payload = []
         org_sums = {}
         for org_id, amount in splits:
@@ -291,7 +291,7 @@ class PaymentTransaction(models.Model):
         for split in summed_splits:
             payload = {
                 'amount': {
-                    'currency': currency,
+                    'currency': self.currency_id.name,
                     'value': f"{split[1]:.2f}"
                 },
                 'destination': {
@@ -323,7 +323,7 @@ class PaymentTransaction(models.Model):
                     else:
                         splits.append((line.product_id.seller_ids[0].partner_id.mollie_partner_id, amount))
 
-            routing_data = self._prepare_routing_payload(splits, self.currency_id.name)
+            routing_data = self._prepare_routing_payload(splits)
         return routing_data
 
     def _mollie_prepare_payment_payload(self, api_type):
