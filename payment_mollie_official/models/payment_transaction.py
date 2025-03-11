@@ -309,7 +309,7 @@ class PaymentTransaction(models.Model):
             splits = []
             vendor_percentage = 0.8
             for order in self.sale_order_ids:
-                for line in order.sale_order_line_ids.filtered(lambda line: line.price_total and line.price_unit >= 0):
+                for line in order.order_line.filtered(lambda line: line.price_total and line.price_unit >= 0):
                     amount = line.price_total * vendor_percentage # check
                     
                     if not line.product_id:
