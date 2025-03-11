@@ -301,7 +301,7 @@ class PaymentTransaction(models.Model):
             }
             routing_payload.append(payload)
         return routing_payload
-    
+
     def _mollie_get_splits(self):
         company = self.company_id or self.env.company
         routing_data = {}
@@ -314,16 +314,18 @@ class PaymentTransaction(models.Model):
                     
                     if not line.product_id:
                         raise exceptions.ValidationError(_('Product ') + line.product_id.name + _(' not found. Please create it.'))
-                    elif not line.product_id.vendor_id: # abhängigkeit von yobst repo vermeiden
+                    elif not len(line.product_id.seller_ids) == 0:
                         raise ValidationError(_('No vendor for product  ') + line.product_id.name + _(' found. Please add a seller id.'))
-                    elif not line.product_id.vendor_id.mollie_partner_id: #2:45
-                        raise ValidationError(_('Partner ID for') + line.product_id.vendor_id.name + _(' not found. Please add a Mollie ID.'))
+                    elif line.product_id.seller_ids[0].partner_id.id == self.company_id.partner_id.id:
+                        continue
+                    elif not line.product_id.seller_ids[0].partner_id.mollie_partner_id:
+                        raise ValidationError(_('Partner ID for') + line.product_id.seller_ids[0].partner_id.name + _(' not found. Please add a Mollie ID.'))
                     else:
-                        splits.append((line.product_id.vendor_id.mollie_partner_id, amount))
+                        splits.append((line.product_id.seller_ids[0].partner_id.mollie_partner_id, amount))
 
             routing_data = self._prepare_routing_payload(splits, self.currency_id.name)
         return routing_data
- 
+
     def _mollie_prepare_payment_payload(self, api_type):
         """ This method prepare the payload based in api type.
 
