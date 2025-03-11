@@ -9,7 +9,7 @@ from odoo.addons.payment_mollie.controllers.main import MollieController
 from odoo.exceptions import ValidationError
 from odoo.tools import float_compare
 
-from odoo import _, api, fields, models, tools
+from odoo import _, api, exceptions, fields, models, tools
 
 _logger = logging.getLogger(__name__)
 
@@ -279,6 +279,51 @@ class PaymentTransaction(models.Model):
             self.provider_reference = result.get('id')
         return result
 
+    def _prepare_routing_payload(self, splits, currency):
+        routing_payload = []
+        org_sums = {}
+        for org_id, amount in splits:
+            if org_id in org_sums:
+                org_sums[org_id] += amount
+            else:
+                org_sums[org_id] = amount
+        summed_splits = list(org_sums.items())
+        for split in summed_splits:
+            payload = {
+                'amount': {
+                    'currency': currency,
+                    'value': f"{split[1]:.2f}"
+                },
+                'destination': {
+                    'type': 'organization',
+                    'organizationId': split[0]
+                }
+            }
+            routing_payload.append(payload)
+        return routing_payload
+    
+    def _mollie_get_splits(self):
+        company = self.company_id or self.env.company
+        routing_data = {}
+        if company.mollie_allow_payment_splits:
+            splits = []
+            vendor_percentage = 0.8
+            for order in self.sale_order_ids:
+                for line in order.sale_order_line_ids.filtered(lambda line: line.price_total and line.price_unit >= 0):
+                    amount = line.price_total * vendor_percentage # check
+                    
+                    if not line.product_id:
+                        raise exceptions.ValidationError(_('Product ') + line.product_id.name + _(' not found. Please create it.'))
+                    elif not line.product_id.vendor_id: # abhängigkeit von yobst repo vermeiden
+                        raise ValidationError(_('No vendor for product  ') + line.product_id.name + _(' found. Please add a seller id.'))
+                    elif not line.product_id.vendor_id.mollie_partner_id: #2:45
+                        raise ValidationError(_('Partner ID for') + line.product_id.vendor_id.name + _(' not found. Please add a Mollie ID.'))
+                    else:
+                        splits.append((line.product_id.vendor_id.mollie_partner_id, amount))
+
+            routing_data = self._prepare_routing_payload(splits, self.currency_id.name)
+        return routing_data
+ 
     def _mollie_prepare_payment_payload(self, api_type):
         """ This method prepare the payload based in api type.
 
@@ -302,7 +347,8 @@ class PaymentTransaction(models.Model):
                 'reference': self.reference,
             },
             'locale': self.provider_id._mollie_user_locale(),
-            'redirectUrl': f'{redirect_url}?ref={self.reference}'
+            'redirectUrl': f'{redirect_url}?ref={self.reference}',
+            'routing': self._mollie_get_splits()
         }
 
         if api_type == 'order':
