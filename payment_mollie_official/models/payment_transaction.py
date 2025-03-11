@@ -293,8 +293,8 @@ class PaymentTransaction(models.Model):
         vendor_percentage = 0.8
         for order in self.sale_order_ids:
             for line in order.order_line.filtered(lambda line: line.price_total and line.price_unit >= 0):
-                amount = line.price_total * vendor_percentage # check
-                
+                amount = line.price_total * vendor_percentage
+
                 if not line.product_id:
                     raise exceptions.ValidationError(_('Product ') + line.product_id.name + _(' not found. Please create it.'))
                 elif len(line.product_id.seller_ids) == 0:
