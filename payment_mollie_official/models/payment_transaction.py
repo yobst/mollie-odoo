@@ -353,6 +353,7 @@ class PaymentTransaction(models.Model):
             })
         else:
             # Payments API parameters
+            payment_data['description'] = f'{_("Sale Order")} ({self.reference})'
             payment_data['routing'] =  self._mollie_get_splits()
 
         # Mollie rejects some local ips/URLs
