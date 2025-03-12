@@ -9,7 +9,7 @@ from odoo.addons.payment_mollie.controllers.main import MollieController
 from odoo.exceptions import ValidationError
 from odoo.tools import float_compare
 
-from odoo import _, api, fields, models, tools
+from odoo import _, api, exceptions, fields, models, tools
 
 _logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class PaymentTransaction(models.Model):
                     transaction.fees = mollie_method._compute_fees(
                         transaction.amount, transaction.currency_id, transaction.partner_id.country_id
                     )
-        transactions.invalidate_cache(['amount', 'fees'])
+        transactions.invalidate_recordset(['amount', 'fees'])
         return transactions
 
     def _process_notification_data(self, data):
@@ -238,30 +238,16 @@ class PaymentTransaction(models.Model):
     def _create_mollie_order_or_payment(self):
         """ In order to capture payment from mollie we need to create a record on mollie.
 
-        Mollie have 2 type of api to create payment record,
-         * order api (used for sales orders)
-         * payment api (used for invoices and other payments)
-
-        Different methods suppports diffrent api we choose the api based on that. Also
-        we have used payment api as fallback api if order api fails.
-
-        Note: self.ensure_one()
+        Mollie has 2 type of APIs to create payment records:
+         * Orders API (used for sales orders; this is deprecated)
+         * Payments API (used for invoices and other payments; should now also be used for sales orders)
+        
+        Since now the Orders API is deprecated, we only use the Payments API
 
         :return: None
         """
         self.ensure_one()
-        method_record = self.provider_id.mollie_methods_ids.filtered(lambda m: m.method_code == self.mollie_payment_method)
-
-        result = None
-
-        # Order API (use if sale orders are present). Also qr code is only supported by Payment API
-        # we do float_compare as partial payments is now possible.
-        if (not method_record.enable_qr_payment) and 'sale_order_ids' in self._fields and self.sale_order_ids and len(self.sale_order_ids) == 1 and float_compare(self.sale_order_ids.amount_total, self.amount, precision_digits=2) == 0:
-            # Order API
-            result = self._mollie_create_payment_record('order')
-        else:
-            result = self._mollie_create_payment_record('payment')
-        return result
+        return self._mollie_create_payment_record('payment')
 
     def _mollie_create_payment_record(self, api_type, silent_errors=False):
         """ This method payment/order record in mollie based on api type.
@@ -279,10 +265,54 @@ class PaymentTransaction(models.Model):
             self.provider_reference = result.get('id')
         return result
 
-    def _mollie_prepare_payment_payload(self, api_type):
-        """ This method prepare the payload based in api type.
+    def _prepare_routing_payload(self, splits):
+        org_sums = {}
+        for org_id, amount in splits:
+            if org_id in org_sums:
+                org_sums[org_id] += amount
+            else:
+                org_sums[org_id] = amount
+        
+        routing_payload = []
+        for split in org_sums.items():
+            payload = {
+                'amount': {
+                    'currency': self.currency_id.name,
+                    'value': f"{split[1]:.2f}"
+                },
+                'destination': {
+                    'type': 'organization',
+                    'organizationId': split[0]
+                }
+            }
+            routing_payload.append(payload)
+        return routing_payload
 
-        Note: this method are splitted so we can write test cases
+    def _mollie_get_splits(self):
+        splits = []
+        vendor_percentage = 0.8
+        for order in self.sale_order_ids:
+            for line in order.order_line.filtered(lambda line: line.price_total and line.price_unit >= 0):
+                amount = line.price_total * vendor_percentage
+
+                if not line.product_id:
+                    raise exceptions.ValidationError(_('Product ') + line.product_id.name + _(' not found. Please create it.'))
+                elif len(line.product_id.seller_ids) == 0:
+                    raise ValidationError(_('No vendor for product ') + line.product_id.name + _(' found. Please add a seller id.'))
+                elif line.product_id.seller_ids[0].partner_id.id == self.company_id.partner_id.id:
+                    continue
+                elif not line.product_id.seller_ids[0].partner_id.mollie_partner_id:
+                    raise ValidationError(_('Partner ID for') + line.product_id.seller_ids[0].partner_id.name + _(' not found. Please add a Mollie ID.'))
+                else:
+                    splits.append((line.product_id.seller_ids[0].partner_id.mollie_partner_id, amount))
+
+        routing_data = self._prepare_routing_payload(splits)
+        return routing_data
+
+    def _mollie_prepare_payment_payload(self, api_type):
+        """ This method prepares the payload based in api type.
+
+        Note: this method is split so we can write test cases
 
         :param str api_type: api is selected based on this parameter
         :return: data of created record received from mollie api
@@ -304,9 +334,17 @@ class PaymentTransaction(models.Model):
             'locale': self.provider_id._mollie_user_locale(),
             'redirectUrl': f'{redirect_url}?ref={self.reference}'
         }
-
+        company = self.company_id or self.env.company
+        splits = []
+        if company.mollie_allow_payment_splits:
+            splits = self._mollie_get_splits()
         if api_type == 'order':
-            # Order api parameters
+            if len(splits) > 0:
+                raise exceptions.ValidationError("The Payments API is needed for payment splits and the Orders API is no longer recommended. Please, contact the code maintainers and inform them about this issue.")
+            else:
+                _logger.warning("The Orders API is no longer recommended. Please, contact the code maintainers and inform them about this issue. The Payments API should be used instead.")
+            
+            # Orders API parameters
             order = self.sale_order_ids[0]
             payment_data.update({
                 'billingAddress': self._prepare_mollie_address(),
@@ -314,8 +352,9 @@ class PaymentTransaction(models.Model):
                 'lines': self._mollie_get_order_lines(order),
             })
         else:
-            # Payment api parameters
-            payment_data['description'] = self.reference
+            # Payments API parameters
+            payment_data['description'] = f'{_("Sale Order")} ({self.reference})'
+            payment_data['routing'] =  self._mollie_get_splits()
 
         # Mollie rejects some local ips/URLs
         # https://help.mollie.com/hc/en-us/articles/213470409
