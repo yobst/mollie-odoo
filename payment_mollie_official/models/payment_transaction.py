@@ -289,25 +289,32 @@ class PaymentTransaction(models.Model):
         return routing_payload
 
     def _mollie_get_splits(self):
-        splits = []
         vendor_percentage = 0.8
-        for order in self.sale_order_ids:
-            for line in order.order_line.filtered(lambda line: line.price_total and line.price_unit >= 0):
+        
+        lines = []
+        if len(self.sale_order_ids) > 0: # when called from sales order form
+            for order in self.sale_order_ids:
+                lines.extend(list(order.order_line.filtered(lambda line: line.price_total and line.price_total >= 0)))
+        elif len(self.invoice_ids) > 0: #  when called from invoice form
+            for invoice in self.invoice_ids:
+                lines.extend(list(invoice.invoice_line_ids.filtered(lambda line: line.price_total and line.price_total >= 0)))
+    
+        splits = []
+        for line in lines:
+            if not line.product_id:
+                raise exceptions.ValidationError(_('Product ') + line.product_id.name + _(' not found. Please create it.'))
+            elif len(line.product_id.seller_ids) == 0:
+                raise ValidationError(_('No vendor for product ') + line.product_id.name + _(' found. Please add a seller id.'))
+            elif line.product_id.seller_ids[0].partner_id.id == self.company_id.partner_id.id:
+                continue
+            elif not line.product_id.seller_ids[0].partner_id.mollie_partner_id:
+                raise ValidationError(_('Partner ID for') + line.product_id.seller_ids[0].partner_id.name + _(' not found. Please add a Mollie ID.'))
+            else:
                 amount = line.price_total * vendor_percentage
+                mollie_id = line.product_id.seller_ids[0].partner_id.mollie_partner_id
+                splits.append((mollie_id, amount))
 
-                if not line.product_id:
-                    raise exceptions.ValidationError(_('Product ') + line.product_id.name + _(' not found. Please create it.'))
-                elif len(line.product_id.seller_ids) == 0:
-                    raise ValidationError(_('No vendor for product ') + line.product_id.name + _(' found. Please add a seller id.'))
-                elif line.product_id.seller_ids[0].partner_id.id == self.company_id.partner_id.id:
-                    continue
-                elif not line.product_id.seller_ids[0].partner_id.mollie_partner_id:
-                    raise ValidationError(_('Partner ID for') + line.product_id.seller_ids[0].partner_id.name + _(' not found. Please add a Mollie ID.'))
-                else:
-                    splits.append((line.product_id.seller_ids[0].partner_id.mollie_partner_id, amount))
-
-        routing_data = self._prepare_routing_payload(splits)
-        return routing_data
+        return splits
 
     def _mollie_prepare_payment_payload(self, api_type):
         """ This method prepares the payload based in api type.
@@ -335,11 +342,9 @@ class PaymentTransaction(models.Model):
             'redirectUrl': f'{redirect_url}?ref={self.reference}'
         }
         company = self.company_id or self.env.company
-        splits = []
-        if company.mollie_allow_payment_splits:
-            splits = self._mollie_get_splits()
+
         if api_type == 'order':
-            if len(splits) > 0:
+            if company.mollie_allow_payment_splits:
                 raise exceptions.ValidationError("The Payments API is needed for payment splits and the Orders API is no longer recommended. Please, contact the code maintainers and inform them about this issue.")
             else:
                 _logger.warning("The Orders API is no longer recommended. Please, contact the code maintainers and inform them about this issue. The Payments API should be used instead.")
@@ -354,7 +359,8 @@ class PaymentTransaction(models.Model):
         else:
             # Payments API parameters
             payment_data['description'] = f'{_("Sale Order")} ({self.reference})'
-            payment_data['routing'] =  self._mollie_get_splits()
+            if company.mollie_allow_payment_splits:
+                payment_data['routing'] = self._prepare_routing_payload(self._mollie_get_splits()) 
 
         # Mollie rejects some local ips/URLs
         # https://help.mollie.com/hc/en-us/articles/213470409
