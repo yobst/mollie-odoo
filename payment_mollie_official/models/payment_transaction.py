@@ -353,12 +353,12 @@ class PaymentTransaction(models.Model):
             order = self.sale_order_ids[0]
             payment_data.update({
                 'billingAddress': self._prepare_mollie_address(),
-                'orderNumber': f'{_("Sale Order")} ({self.reference})',
+                'orderNumber': self.reference,
                 'lines': self._mollie_get_order_lines(order),
             })
         else:
             # Payments API parameters
-            payment_data['description'] = f'{_("Sale Order")} ({self.reference})'
+            payment_data['description'] = self.reference
             if company.mollie_allow_payment_splits:
                 payment_data['routing'] = self._prepare_routing_payload(self._mollie_get_splits()) 
 
