@@ -105,6 +105,8 @@ class MolliePosTerminal(models.Model):
                         ('id', '=', line['product_id'])
                     ], limit=1)
                 if product:
+                    if not product.supplier_is_owner:
+                        continue
                     seller_id = product.variant_seller_ids[0]
                     if seller_id:
                         partner_id = seller_id.partner_id
