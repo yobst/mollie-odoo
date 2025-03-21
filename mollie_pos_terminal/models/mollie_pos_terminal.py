@@ -110,7 +110,7 @@ class MolliePosTerminal(models.Model):
                 elif product.seller_ids[0].partner_id.id == self.company_id.partner_id.id:
                     continue # we are the owner; no routing needed
                 elif not product.seller_ids[0].partner_id.mollie_partner_id:
-                    raise ValidationError(_('Partner ID for') + product.seller_ids[0].partner_id.name + _(' not found. Please add a Mollie ID.'))
+                    raise ValidationError(_('Mollie Partner ID for') + product.seller_ids[0].partner_id.name + _(' not found. Please add a Mollie ID.'))
                 else:
                     amount = line['price'] * line['quantity'] * vendor_percentage
                     mollie_id = product.seller_ids[0].partner_id.mollie_partner_id
