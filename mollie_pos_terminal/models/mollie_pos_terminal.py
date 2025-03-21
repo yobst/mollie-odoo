@@ -96,36 +96,25 @@ class MolliePosTerminal(models.Model):
 
         if allow_splits:
             splits = []    
-            fee = 0.8
+            vendor_percentage = 0.8
             lines = data['lines']
             filtered_lines = [line for line in lines if "price" in line and line["price"] >= 0]
             for line in filtered_lines:
-                amount = line['price'] * line['quantity'] * fee
-                product = self.env['product.product'].search([
-                        ('id', '=', line['product_id'])
-                    ], limit=1)
-                if product:
-                    if not product.supplier_is_owner:
-                        continue
-                    seller_id = product.variant_seller_ids[0]
-                    if seller_id:
-                        partner_id = seller_id.partner_id
-                        if partner_id:
-                            if partner_id.id == self.company_id.partner_id.id:
-                                # Case of routing to ourselves, so we can skip the split here.
-                                # It is also not permitted by Mollie.
-                                continue
-                            mollie_partner_id = partner_id.mollie_partner_id
-                            if mollie_partner_id:
-                                splits.append((mollie_partner_id, amount))
-                            else:
-                                raise ValidationError(_('Mollie ID for partner ') + str(partner_id.id) + _(' not found. Please add a Mollie ID.'))
-                        else:
-                            raise ValidationError(_('Partner ID for') + str(seller_id.id) + _(' not found. Please add a Mollie ID.'))
-                    else:
-                        raise ValidationError(_('No seller for product  ') + str(product.id) + _(' found. Please add a seller id.'))
+                product = self.env['product.product'].browse([line['product_id']])
+                if not product:
+                    raise ValidationError(_('Product with ID ') + line['product_id'] + _(' not found.'))
+                elif not product.supplier_is_owner:
+                    continue # we are the owner; no routing needed
+                elif len(product.seller_ids) == 0:
+                    raise ValidationError(_('No vendor for product ') + product.name + _(' found. Please add a seller id.'))
+                elif product.seller_ids[0].partner_id.id == self.company_id.partner_id.id:
+                    continue # we are the owner; no routing needed
+                elif not product.seller_ids[0].partner_id.mollie_partner_id:
+                    raise ValidationError(_('Partner ID for') + product.seller_ids[0].partner_id.name + _(' not found. Please add a Mollie ID.'))
                 else:
-                    raise ValidationError(_('Product ') + str(line['product_id']) + _(' not found. Please create it.'))
+                    amount = line['price'] * line['quantity'] * vendor_percentage
+                    mollie_id = product.seller_ids[0].partner_id.mollie_partner_id
+                    splits.append((mollie_id, amount))
             routing_data = self._prepare_routing_payload(splits, data['curruncy'])
             payment_payload['routing'] = routing_data
             
