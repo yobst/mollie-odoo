@@ -302,11 +302,13 @@ class PaymentTransaction(models.Model):
         splits = []
         for line in lines:
             if not line.product_id:
-                raise exceptions.ValidationError(_('Product ') + line.product_id.name + _(' not found. Please create it.'))
+                raise exceptions.ValidationError(_('Product for ') + line.display_name + _(' not found. Please add a product.'))
+            elif not line.product_id.supplier_is_owner:
+                continue # we are the owner; no routing needed
             elif len(line.product_id.seller_ids) == 0:
-                raise ValidationError(_('No vendor for product ') + line.product_id.name + _(' found. Please add a seller id.'))
+                raise ValidationError(_('No vendor for product ') + line.product_id.name + _(' found. Please add a vendor.'))
             elif line.product_id.seller_ids[0].partner_id.id == self.company_id.partner_id.id:
-                continue
+                continue # we are the owner; no routing needed
             elif not line.product_id.seller_ids[0].partner_id.mollie_partner_id:
                 raise ValidationError(_('Partner ID for') + line.product_id.seller_ids[0].partner_id.name + _(' not found. Please add a Mollie ID.'))
             else:
