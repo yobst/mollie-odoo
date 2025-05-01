@@ -3,21 +3,21 @@
 </p>
 <h1 align="center">Mollie addon for Odoo 16</h1>
 
+A submodule of our [Odoo](https://github.com/yobst/odoo) repository. Each subfolder in this repository corresponds to a module in Odoo.
+
 ## How to configure
 
-- Download the module and place the module in apps folder.
-- Install the python dependencies.
-- Install this module in your Odoo instance.
-- Open **Website > Configuration > Payment Acquirers** and open acquirers
-- Fill the API keys and credentials. (You will these keys from your mollie dashboard)
-- Click on Mollie Payment Methods tab and click on sync payment method button.
-- That's it you are ready to accept payments.
+- Set up Git submodule:
+``` sh
+git submodule init mollie/mollie-odoo
+git submodule update mollie/mollie-odoo
 
-## Installing the Python packages
-You will need two Python packages for using this application.
-You can install both these requirements by running the following command:
 ```
-pip3 install -r requirements.txt
-```
+- Install the python dependencies: `pip install -r requirements.txt`.
+- Activate the needed Mollie module(s) in your Odoo instance.
+- Open the **Point of Sale** module.
+- Go to **Configuration > Settings**. Enter the API key under **Mollie Terminal Api Key** in the **Payment Terminls** section. 
+- Go to **Configuration > Mollie Pos Terminal**, and sync terminals.
+- Go to **Configuration > Payment Methods**, and create a payment method corresponding to each Mollie terminal to be used.
 
-Learn more about it: https://apps.odoo.com/apps/modules/16.0/payment_mollie_official/
+Learn more: https://apps.odoo.com/apps/modules/16.0/payment_mollie_official/
