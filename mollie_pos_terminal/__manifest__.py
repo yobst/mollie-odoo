@@ -9,6 +9,7 @@
     'category': '',
     'depends': [
         'point_of_sale',
+        'product_ext'
     ],
     'data': [
         'security/ir.model.access.csv',

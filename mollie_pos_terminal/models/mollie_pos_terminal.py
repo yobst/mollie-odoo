@@ -61,6 +61,7 @@ class MolliePosTerminal(models.Model):
 
     def _api_make_payment_request(self, data):
         payment_payload = self._prepare_payment_payload(data)
+        _logger.info('Mollie POS Terminal Payload on: %s', str(payment_payload))
         result = self._mollie_api_call('/payments', data=payment_payload, method='POST', silent=True)
         self.env['mollie.pos.terminal.payments']._create_mollie_payment_request(result, {**data, 'terminal_id': self.id})
         return result
@@ -71,10 +72,13 @@ class MolliePosTerminal(models.Model):
     def _api_get_mollie_payment_status(self, transaction_id):
         return self.sudo()._mollie_api_call(f'/payments/{transaction_id}', method='GET', silent=True)
 
+
     def _prepare_payment_payload(self, data):
         base_url = self.get_base_url()
+        company = self.company_id or self.env.company
         webhook_url = urls.url_join(base_url, '/pos_mollie/webhook/')
-        return {
+        allow_splits = company.mollie_allow_payment_splits
+        payment_payload = {
             "amount": {
                 "currency": data['curruncy'],
                 "value": f"{data['amount']:.2f}"
@@ -89,6 +93,55 @@ class MolliePosTerminal(models.Model):
                 "order_id": data['order_id'],
             }
         }
+
+        if allow_splits:
+            splits = []    
+            vendor_percentage = 0.8
+            lines = data['lines']
+            filtered_lines = [line for line in lines if "price" in line and line["price"] >= 0]
+            for line in filtered_lines:
+                product = self.env['product.product'].browse([line['product_id']])
+                if not product:
+                    raise ValidationError(_('Product with ID ') + line['product_id'] + _(' not found.'))
+                elif not product.supplier_is_owner:
+                    continue # we are the owner; no routing needed
+                elif len(product.seller_ids) == 0:
+                    raise ValidationError(_('No vendor for product ') + product.name + _(' found. Please add a seller id.'))
+                elif product.seller_ids[0].partner_id.id == self.company_id.partner_id.id:
+                    continue # we are the owner; no routing needed
+                elif not product.seller_ids[0].partner_id.mollie_partner_id:
+                    raise ValidationError(_('Mollie Partner ID for') + product.seller_ids[0].partner_id.name + _(' not found. Please add a Mollie ID.'))
+                else:
+                    amount = line['price'] * line['quantity'] * vendor_percentage
+                    mollie_id = product.seller_ids[0].partner_id.mollie_partner_id
+                    splits.append((mollie_id, amount))
+            routing_data = self._prepare_routing_payload(splits, data['curruncy'])
+            payment_payload['routing'] = routing_data
+            
+        return payment_payload
+    
+    def _prepare_routing_payload(self, splits, currency):
+        routing_payload = []
+        org_sums = {}
+        for org_id, amount in splits:
+            if org_id in org_sums:
+                org_sums[org_id] += amount
+            else:
+                org_sums[org_id] = amount
+        summed_splits = list(org_sums.items())
+        for split in summed_splits:
+            payload = {
+                'amount': {
+                    'currency': currency,
+                    'value': f"{split[1]:.2f}"
+                },
+                'destination': {
+                    'type': 'organization',
+                    'organizationId': split[0]
+                }
+            }
+            routing_payload.append(payload)
+        return routing_payload
 
     # =====================
     # GENERIC TOOLS METHODS
