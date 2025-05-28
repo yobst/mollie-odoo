@@ -12,7 +12,8 @@
     'support': '',
     'images': [],
     'depends': [
-        "point_of_sale"
+        "point_of_sale",
+        "mollie_pos_terminal"
     ],
     'data': [
     ],

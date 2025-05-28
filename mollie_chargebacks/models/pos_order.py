@@ -1,4 +1,4 @@
-from odoo import models
+from odoo import _, exceptions, models
 import logging
 
 logger = logging.getLogger()
@@ -19,10 +19,14 @@ class PosOrder(models.Model):
             
         return [{'name': vendor.mollie_partner_id, 'amount': amount} for vendor, amount in refund_per_vendor.items()]
                 
-                    
     
-    def _refund(self):
+    def _refund(self): 
         self.ensure_one()
         
-        payment_id = False #TODO
+        if len(self.payment_ids) == 0:
+            raise exceptions.ValidationError(_("Keine Transaktion für diesen Auftrag gefunden!"))
+        
+        payment_id = self.payment_ids[0].transaction_id # von Modell pos.payment
+        # PosMakePayment anpassen
+        
         route = f"https://api.mollie.com/v2/payments/{payment_id}/refunds"
